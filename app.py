@@ -20,6 +20,8 @@ import markdown as markdown_lib
 from markdownify import MarkdownConverter
 from streamlit_quill import st_quill
 import streamlit.components.v1 as components
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
 
 
 class _ExamMarkdownConverter(MarkdownConverter):
@@ -888,7 +890,16 @@ if not analysis.startswith("13."):
         st.session_state.pop("analysis_output_values", None)
         st.session_state.pop("analysis_output_figures", None)
         execution_df = df.copy()
-        env = {"df": execution_df, "pd": pd, "np": np, "pg": pg, "sns": sns, "plt": plt}
+        env = {
+            "df": execution_df,
+            "pd": pd,
+            "np": np,
+            "pg": pg,
+            "sns": sns,
+            "plt": plt,
+            "sm": sm,
+            "smf": smf,
+        }
         input_values = env.copy()
         try:
             plt.close("all")
