@@ -888,6 +888,38 @@ if not analysis.startswith("13."):
         st.session_state["code_editor_generated_signature"] = generated_code_signature
     st.session_state.setdefault("code_editor_revision", 0)
     with file_col:
+        saved_code_files = sorted(
+            (
+                path
+                for path in CODE_UPLOAD_DIR.iterdir()
+                if path.is_file() and path.suffix.lower() == ".py"
+            ),
+            key=lambda path: path.name.casefold(),
+        )
+        saved_code_options = ["Select a saved file..."] + [
+            path.name for path in saved_code_files
+        ]
+        selected_code_file = st.selectbox(
+            "Saved Python files",
+            saved_code_options,
+            key="saved_code_file_selection",
+        )
+        load_saved_code = st.button(
+            "Load selected file",
+            disabled=selected_code_file == "Select a saved file...",
+            key="load_saved_code_file",
+        )
+        if load_saved_code:
+            saved_code_path = CODE_UPLOAD_DIR / selected_code_file
+            try:
+                saved_code = saved_code_path.read_bytes().decode("utf-8-sig")
+            except UnicodeDecodeError:
+                st.error(f"{selected_code_file} must use UTF-8 encoding.")
+            else:
+                st.session_state["code_editor_initial_value"] = saved_code
+                st.session_state["analysis_code"] = saved_code
+                st.session_state["code_editor_revision"] += 1
+
         uploaded_code = st.file_uploader(
             "Import Python file",
             type=["py"],
@@ -902,11 +934,14 @@ if not analysis.startswith("13."):
         )
     if uploaded_code is not None and import_code:
         try:
-            st.session_state["code_editor_initial_value"] = uploaded_code.getvalue().decode("utf-8-sig")
-            st.session_state["code_editor_revision"] += 1
+            imported_code = uploaded_code.getvalue().decode("utf-8-sig")
         except UnicodeDecodeError:
             with file_col:
                 st.error("The selected file must use UTF-8 encoding.")
+        else:
+            st.session_state["code_editor_initial_value"] = imported_code
+            st.session_state["analysis_code"] = imported_code
+            st.session_state["code_editor_revision"] += 1
 
     editor_key = (
         f"analysis_code_editor_{st.session_state['code_editor_revision']}_"
