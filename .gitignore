@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Keep uploaded data and code local to each app checkout.
+Uploads/Datasets/*
+!Uploads/Datasets/.gitkeep
+Uploads/Codes/*
+!Uploads/Codes/.gitkeep
+!Uploads/Codes/Chapter-14-1.py

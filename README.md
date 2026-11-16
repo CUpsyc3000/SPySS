@@ -16,3 +16,5 @@ streamlit run app.py
 - `nonparametric_data.csv` — Mann–Whitney, Kruskal–Wallis, and Wilcoxon
 
 Students may also upload CSV, Excel, or SPSS `.sav` files.
+
+Uploads are copied into `Uploads/Datasets` or `Uploads/Codes` in the app directory. The DataFrame CSV and analysis Python downloads are also saved there when their download buttons are clicked. The browser's own download location remains controlled by browser settings.
