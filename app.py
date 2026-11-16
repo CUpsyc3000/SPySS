@@ -882,9 +882,14 @@ if not analysis.startswith("13."):
     generated_code_signature = hashlib.md5(code.encode()).hexdigest()
     if "code_editor_initial_value" not in st.session_state:
         st.session_state["code_editor_initial_value"] = code
+    preserve_editor_code = st.session_state.pop(
+        "preserve_editor_code_after_dataframe_update",
+        False,
+    )
     if st.session_state.get("code_editor_generated_signature") != generated_code_signature:
-        st.session_state["code_editor_initial_value"] = code
-        st.session_state["analysis_code"] = code
+        if not preserve_editor_code:
+            st.session_state["code_editor_initial_value"] = code
+            st.session_state["analysis_code"] = code
         st.session_state["code_editor_generated_signature"] = generated_code_signature
     st.session_state.setdefault("code_editor_revision", 0)
     with file_col:
@@ -972,6 +977,7 @@ if not analysis.startswith("13."):
         execution_df = df.copy()
         env = {
             "df": execution_df,
+            "sl": st,
             "pd": pd,
             "np": np,
             "pg": pg,
@@ -988,6 +994,7 @@ if not analysis.startswith("13."):
             if loaded_df is None and env.get("df") is not execution_df:
                 loaded_df = env.get("df")
             if isinstance(loaded_df, pd.DataFrame):
+                st.session_state["preserve_editor_code_after_dataframe_update"] = True
                 revision = st.session_state.get("code_loaded_dataframe_revision", 0) + 1
                 st.session_state["code_loaded_dataframe"] = loaded_df.copy()
                 st.session_state["code_loaded_dataframe_source"] = data_source_key
