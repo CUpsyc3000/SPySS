@@ -24,6 +24,26 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 
 
+APP_DIR = Path(__file__).parent
+DATA_UPLOAD_DIR = APP_DIR / "Uploads" / "Datasets"
+CODE_UPLOAD_DIR = APP_DIR / "Uploads" / "Codes"
+DATA_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+CODE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _uploaded_file_path(uploaded_file, directory):
+    filename = Path(uploaded_file.name.replace("\\", "/")).name
+    destination = directory / filename
+    contents = uploaded_file.getvalue()
+    if not destination.exists() or destination.read_bytes() != contents:
+        destination.write_bytes(contents)
+    return destination
+
+
+def _save_download(contents, destination):
+    destination.write_bytes(contents)
+
+
 class _ExamMarkdownConverter(MarkdownConverter):
     def convert_span(self, el, text, parent_tags=None):
         style_by_class = {
@@ -114,7 +134,7 @@ def _is_method_documentation_table(value):
 
 @st.fragment
 def _render_code_editor(initial_value, editor_key):
-    st.session_state["analysis_code"] = st_ace(
+    editor_value = st_ace(
         value=initial_value,
         language="python",
         theme="github",
@@ -125,6 +145,9 @@ def _render_code_editor(initial_value, editor_key):
         wrap=True,
         auto_update=True,
     )
+    if editor_value is not None:
+        st.session_state["analysis_code"] = editor_value
+        st.session_state["code_editor_initial_value"] = editor_value
 
 
 @st.fragment
@@ -242,6 +265,8 @@ st.sidebar.caption(dataset_note)
 uploaded = st.sidebar.file_uploader(
     "Or upload CSV, Excel, or SAV", type=["csv", "xlsx", "xls", "sav"]
 )
+if uploaded is not None:
+    _uploaded_file_path(uploaded, DATA_UPLOAD_DIR)
 
 source_identity = f"{dataset_name}:{filename or ''}:{uploaded.name if uploaded else ''}"
 if uploaded is not None:
@@ -292,6 +317,18 @@ if st.checkbox("Show data preview", value=True):
         num_rows="dynamic",
         key=preview_key,
     )
+
+data_csv = df.to_csv(index=False).encode("utf-8")
+st.sidebar.download_button(
+    "Download DataFrame (.csv)",
+    data=data_csv,
+    file_name="dataset.csv",
+    mime="text/csv",
+    key="download_dataframe",
+    on_click=_save_download,
+    args=(data_csv, DATA_UPLOAD_DIR / "dataset.csv"),
+)
+st.sidebar.caption(f"App-local data files: {DATA_UPLOAD_DIR}")
 
 analysis = st.sidebar.selectbox("Analysis", [
     "1. Descriptive statistics",
@@ -856,6 +893,8 @@ if not analysis.startswith("13."):
             type=["py"],
             key="code_file_upload",
         )
+        if uploaded_code is not None:
+            _uploaded_file_path(uploaded_code, CODE_UPLOAD_DIR)
         import_code = st.button(
             "Load into editor",
             disabled=uploaded_code is None,
@@ -876,14 +915,20 @@ if not analysis.startswith("13."):
 
     with editor_col:
         _render_code_editor(st.session_state["code_editor_initial_value"], editor_key)
-        code = st.session_state.get("analysis_code", st.session_state["code_editor_initial_value"])
+        code = st.session_state.get("analysis_code")
+        if code is None:
+            code = st.session_state["code_editor_initial_value"]
+            st.session_state["analysis_code"] = code
     with file_col:
         st.download_button(
             "Download .py",
             data=code or "",
             file_name="analysis.py",
             mime="text/x-python",
+            on_click=_save_download,
+            args=((code or "").encode("utf-8"), CODE_UPLOAD_DIR / "analysis.py"),
         )
+        st.caption(f"App-local code files: {CODE_UPLOAD_DIR}")
 
 if not analysis.startswith("13."):
     if st.button("Run analysis", type="primary"):
